@@ -6,6 +6,7 @@ using namespace std;
 int main() {
   vector<vector<int>> matrixA;
   vector<vector<int>> matrixB;
+  vector<vector<int>> matrixC;
   int rowsA, colsA;
   int rowsB, colsB;
 
@@ -28,7 +29,21 @@ int main() {
   printMatrix("A", matrixA, rowsA, colsA);
   printMatrix("B", matrixB, rowsB, colsB);
 
-  cout << "Matrices loaded successfully." << endl;
+  cout << "Matrices loaded successfully." << endl << endl;
+
+  // Multiply matrices A & B
+  if (!multiplyMatrices(matrixA, rowsA, colsA, matrixB, rowsB, colsB,
+                        matrixC)) {
+    return 1;
+  }
+
+  // Display resulting C matrix
+  printMatrix("A × B", matrixC, rowsA, colsB);
+
+  // Write resulting matrix into C.txt
+  if (!writeMatrix("C.txt", matrixC, rowsA, colsB)) {
+    return 1;
+  }
 
   return 0;
 }

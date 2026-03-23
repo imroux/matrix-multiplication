@@ -58,7 +58,8 @@ bool readMatrix(const string &filename, vector<vector<int>> &matrix, int &rows,
     return false;
   }
 
-  file.close();
+  file.close(); // Possibly redundunt as ifstream destructor should
+                // automatically handle cleanup
   return true;
 }
 
@@ -72,6 +73,59 @@ void printMatrix(const string &name, const vector<vector<int>> &matrix,
     cout << endl;
   }
   cout << endl;
+}
+
+bool multiplyMatrices(const vector<vector<int>> &A, int rowsA, int colsA,
+                      const vector<vector<int>> &B, int rowsB, int colsB,
+                      vector<vector<int>> &C) {
+  C.resize(rowsA, vector<int>(colsB, 0));
+
+  // Standard matrix multiplication: C[i][j] = sum(A[i][k] * B[k][j])
+  for (int i = 0; i < rowsA; ++i) {
+    for (int j = 0; j < colsB; ++j) {
+      for (int k = 0; k < colsA; ++k) {
+        C[i][j] += A[i][k] * B[k][j];
+      }
+    }
+  }
+  return true;
+}
+
+bool writeMatrix(const string &filename, const vector<vector<int>> &matrix,
+                 int rows, int cols) {
+  ofstream file(filename);
+
+  // Check if file opened successfully
+  if (!file.is_open()) {
+    cerr << "Error: Could not create file " << filename << endl;
+    return false;
+  }
+
+  // Write dimensions on the first line
+  file << rows << " " << cols << "\n";
+
+  // Write matrix data row by row
+  for (int i = 0; i < rows; ++i) {
+    for (int j = 0; j < cols; ++j) {
+      file << matrix[i][j];
+      // Add space between values except for the last one in a row
+      if (j < cols - 1) {
+        file << " ";
+      }
+    }
+    file << "\n"; // Newline after each row
+  }
+
+  // Check if writing succeeded
+  if (file.fail()) {
+    cerr << "Error: Failed to write to " << filename << endl;
+    file.close();
+    return false;
+  }
+
+  file.close(); // Possibly redundunt as ofstream destructor should
+                // automatically handle cleanup
+  return true;
 }
 
 bool validateInputDimensions(int rowsA, int colsA, int rowsB, int colsB) {
