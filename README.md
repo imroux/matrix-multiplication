@@ -11,6 +11,13 @@ Multiply 2x Matrices in C++ using Pthreads
 From the project root folder run the following commands:
 
 ```
-g++ -std=c++11 src/main.cpp src/matrix.cpp -o bin/matrix_multiplication
+g++ -std=c++11 src/main.cpp src/matrix.cpp -o bin/matrix_multiplication -pthread
 ./bin/matrix_multiplication
+```
+
+For additional debugging warnings, use the following compilation command
+instead:
+
+```
+g++ -std=c++11 src/main.cpp src/matrix.cpp -o bin/matrix_multiplication -pthread -Wall -Wextra
 ```

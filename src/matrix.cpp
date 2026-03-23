@@ -21,6 +21,16 @@ struct MultiplyTask {
   pthread_mutex_t *mutex;       // Mutex for synchronization
 };
 
+// Minimal struct to pass data to the log writer thread
+struct LogData {
+  string filename;
+  vector<vector<int>> matrix;
+  int rows;
+  int cols;
+  double computationTimeMs;
+  int numThreads;
+};
+
 bool readMatrix(const string &filename, vector<vector<int>> &matrix, int &rows,
                 int &cols) {
   ifstream file(filename);
@@ -197,40 +207,95 @@ bool multiplyMatrices(const vector<vector<int>> &A, int rowsA, int colsA,
   return true;
 }
 
-bool writeMatrix(const string &filename, const vector<vector<int>> &matrix,
-                 int rows, int cols) {
-  ofstream file(filename);
+// bool writeMatrix(const string &filename, const vector<vector<int>> &matrix,
+//                  int rows, int cols) {
+// ofstream file(filename);
+//
+// // Check if file opened successfully
+// if (!file.is_open()) {
+//   cerr << "Error: Could not create file " << filename << endl;
+//   return false;
+// }
+//
+// // Write dimensions on the first line
+// file << rows << " " << cols << "\n";
+//
+// // Write matrix data row by row
+// for (int i = 0; i < rows; ++i) {
+//   for (int j = 0; j < cols; ++j) {
+//     file << matrix[i][j];
+//     // Add space between values except for the last one in a row
+//     if (j < cols - 1) {
+//       file << " ";
+//     }
+//   }
+//   file << "\n"; // Newline after each row
+// }
+//
+// // Check if writing succeeded
+// if (file.fail()) {
+//   cerr << "Error: Failed to write to " << filename << endl;
+//   file.close();
+//   return false;
+// }
+//
+// file.close(); // Possibly redundunt as ofstream destructor should
+//               // automatically handle cleanup
+//   return true;
+// }
 
-  // Check if file opened successfully
+// Thread function: appends matrix to log file in same format as input files
+void *logWriter(void *arg) {
+  LogData *data = static_cast<LogData *>(arg);
+
+  // Open file in append mode
+  ofstream file(data->filename, ios::app);
   if (!file.is_open()) {
-    cerr << "Error: Could not create file " << filename << endl;
-    return false;
+    cerr << "Error: Could not open log file " << data->filename << endl;
+    delete data; // Clean up heap-allocated data
+    return nullptr;
   }
 
-  // Write dimensions on the first line
-  file << rows << " " << cols << "\n";
+  // Write timing info and number of threads as a comment line
+  file << "# Computation time: " << data->computationTimeMs << " ms\n";
+  file << "# Number of threads: " << data->numThreads << "\n";
 
-  // Write matrix data row by row
-  for (int i = 0; i < rows; ++i) {
-    for (int j = 0; j < cols; ++j) {
-      file << matrix[i][j];
-      // Add space between values except for the last one in a row
-      if (j < cols - 1) {
+  // Write matrix in the same format as A.txt / B.txt
+  file << data->rows << " " << data->cols << "\n";
+  for (int i = 0; i < data->rows; ++i) {
+    for (int j = 0; j < data->cols; ++j) {
+      file << data->matrix[i][j];
+      if (j < data->cols - 1) {
         file << " ";
       }
     }
-    file << "\n"; // Newline after each row
+    file << "\n";
   }
+  file << "\n";
 
-  // Check if writing succeeded
-  if (file.fail()) {
-    cerr << "Error: Failed to write to " << filename << endl;
-    file.close();
+  file.close();
+  delete data; // Clean up
+  return nullptr;
+}
+
+// Public function: spawns detached log writer thread
+bool appendToLog(const string &filename, const vector<vector<int>> &matrix,
+                 int rows, int cols, double computationTimeMs, int numThreads) {
+
+  // Allocate data on heap (thread takes ownership)
+  LogData *data =
+      new LogData{filename, matrix, rows, cols, computationTimeMs, numThreads};
+
+  pthread_t thread;
+  if (pthread_create(&thread, nullptr, logWriter, data) != 0) {
+    cerr << "Error: Failed to create log writer thread" << endl;
+    delete data; // Manually clean up heap-allocated data due to it being
+                 // created with "new" keyword if thread creation fails
     return false;
   }
 
-  file.close(); // Possibly redundunt as ofstream destructor should
-                // automatically handle cleanup
+  // Ensures logger finishes before main exits
+  pthread_join(thread, nullptr);
   return true;
 }
 
