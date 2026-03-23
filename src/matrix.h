@@ -4,18 +4,16 @@
 #include <string>
 #include <vector>
 
-using namespace std;
-
 // Function declarations (prototypes)
-bool readMatrix(const string &filename, vector<vector<int>> &matrix, int &rows,
-                int &cols);
-void printMatrix(const string &name, const vector<vector<int>> &matrix,
-                 int rows, int cols);
-bool multiplyMatrices(const vector<vector<int>> &A, int rowsA, int colsA,
-                      const vector<vector<int>> &B, int rowsB, int colsB,
-                      vector<vector<int>> &C);
-bool writeMatrix(const string &filename, const vector<vector<int>> &matrix,
-                 int rows, int cols);
+bool readMatrix(const std::string& filename,
+                std::vector<std::vector<int>>& matrix, int& rows, int& cols);
+void printMatrix(const std::string& name,
+                 const std::vector<std::vector<int>>& matrix, int rows, int cols);
+bool multiplyMatrices(const std::vector<std::vector<int>>& A, int rowsA, int colsA,
+                      const std::vector<std::vector<int>>& B, int rowsB, int colsB,
+                      std::vector<std::vector<int>>& C);
+bool writeMatrix(const std::string& filename,
+                 const std::vector<std::vector<int>>& matrix, int rows, int cols);
 bool validateInputDimensions(int rowsA, int colsA, int rowsB, int colsB);
 
 #endif // MATRIX_H
