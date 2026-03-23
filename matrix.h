@@ -10,6 +10,6 @@ bool readMatrix(const std::string &filename,
 void printMatrix(const std::string &name,
                  const std::vector<std::vector<int>> &matrix, int rows,
                  int cols);
-bool validateInputs(int rowsA, int colsA, int rowsB, int colsB);
+bool validateInputDimensions(int rowsA, int colsA, int rowsB, int colsB);
 
 #endif // MATRIX_H

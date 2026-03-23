@@ -20,7 +20,7 @@ int main() {
   }
 
   // Validate correctness of input matrices
-  if (!validateInputs(rowsA, colsA, rowsB, colsB)) {
+  if (!validateInputDimensions(rowsA, colsA, rowsB, colsB)) {
     return 1;
   }
 

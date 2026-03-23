@@ -1,5 +1,4 @@
-#include "matrix.h"  // Include our own header first
-#include <algorithm> // Required for std::any_of
+#include "matrix.h" // Include our own header first
 #include <fstream>
 #include <iostream>
 
@@ -24,12 +23,39 @@ bool readMatrix(const string &filename, vector<vector<int>> &matrix, int &rows,
 
   for (int i = 0; i < rows; ++i) {
     for (int j = 0; j < cols; ++j) {
-      if (!(file >> matrix[i][j])) {
-        cerr << "Error: Not enough data in " << filename << endl;
-        file.close();
+      int value;
+      if (file >> value) {
+        // Successfully read an integer
+        matrix[i][j] = value;
+      } else {
+        // Failed to read a value
+        if (file.eof()) {
+          cerr << "Unexpected end of file at row " + to_string(i + 1) +
+                      ", col " + to_string(j + 1) + " in " + filename
+               << endl;
+          return false;
+        } else if (file.fail()) {
+          // Try to peek at the bad character for a more precise error
+          file.clear(); // Clear fail state to peek
+          char bad_char = file.peek();
+          cerr << "Invalid number at row " + to_string(i + 1) + ", col " +
+                      to_string(j + 1) + " (found '" + string(1, bad_char) +
+                      "') in " + filename
+               << endl;
+          return false;
+        }
+        cerr << "Read error at row " + to_string(i + 1) + ", col " +
+                    to_string(j + 1) + " in " + filename
+             << endl;
         return false;
       }
     }
+  }
+
+  string leftover;
+  if (file >> leftover) {
+    cerr << "Extra data found after matrix in " + filename << endl;
+    return false;
   }
 
   file.close();
@@ -48,12 +74,17 @@ void printMatrix(const string &name, const vector<vector<int>> &matrix,
   cout << endl;
 }
 
-bool validateInputs(int rowsA, int colsA, int rowsB, int colsB) {
+bool validateInputDimensions(int rowsA, int colsA, int rowsB, int colsB) {
   // Check that all matrix dimensions are positive numbers
-  int dims[] = {rowsA, colsA, rowsB, colsB};
-  if (any_of(begin(dims), end(dims), [](int val) { return val <= 0; })) {
-    cerr << "Error: Matrix dimensions must be positive numbers!" << endl;
-    return false;
+  const char *dim_names[] = {"rowsA", "colsA", "rowsB", "colsB"};
+  int dim_values[] = {rowsA, colsA, rowsB, colsB};
+
+  for (int i = 0; i < 4; ++i) {
+    if (dim_values[i] <= 0) {
+      cerr << "Error: " << dim_names[i] << " (" << dim_values[i]
+           << ") must be positive!" << endl;
+      return false;
+    }
   }
 
   // Check that matrix multiplication is possible
