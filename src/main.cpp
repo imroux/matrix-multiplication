@@ -1,3 +1,7 @@
+// NOTE: tested on Arch Linux with 6.19.8-arch1-1 kernel.
+// Compiler: g++ (GCC) 15.2.1 20260209
+// C++ Standard: C++11
+
 #include "matrix.h" // Include custom matrix operations
 #include <chrono>
 #include <iostream>
