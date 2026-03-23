@@ -10,4 +10,5 @@ Multiply 2x Matrices in C++ using Pthreads
 
 ```
 g++ -std=c++11 main.cpp matrix.cpp -o bin/matrix_multiplication
+./bin/matrix_multiplication
 ```
