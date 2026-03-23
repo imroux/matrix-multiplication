@@ -32,8 +32,8 @@ int main() {
   cout << "Matrices loaded successfully." << endl << endl;
 
   // Multiply matrices A & B
-  if (!multiplyMatrices(matrixA, rowsA, colsA, matrixB, rowsB, colsB,
-                        matrixC)) {
+  if (!multiplyMatrices(matrixA, rowsA, colsA, matrixB, rowsB, colsB, matrixC,
+                        4)) {
     return 1;
   }
 

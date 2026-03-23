@@ -1,8 +1,25 @@
 #include "matrix.h" // Include our own header first
 #include <fstream>
 #include <iostream>
+#include <pthread.h>
+#include <unistd.h> // for usleep()
 
 using namespace std;
+
+// Shared state for work distribution
+// Struct is required for packaging of data due to the fact pthread_create
+// accepts only one pointer
+struct MultiplyTask {
+  const vector<vector<int>> *A; // Need to read A[i][k]
+  const vector<vector<int>> *B; // Need to read B[k][j]
+  vector<vector<int>> *C;       // Need to write C[i][j]
+  int colsA;                    // For inner loop: k < colsA
+  int colsB;                    // To know when j wraps
+  int *next_i;                  // Shared work tracker
+  int *next_j;                  // Shared work tracker
+  int *remaining;               // To know when to stop
+  pthread_mutex_t *mutex;       // Mutex for synchronization
+};
 
 bool readMatrix(const string &filename, vector<vector<int>> &matrix, int &rows,
                 int &cols) {
@@ -75,19 +92,108 @@ void printMatrix(const string &name, const vector<vector<int>> &matrix,
   cout << endl;
 }
 
+// Worker thread: computes one element at a time
+// This code runs in parallel, in a separate thread
+// Each thread executes this same function
+void *multiplyWorker(void *arg) {
+  // static_cast is required due to the fact that pthread_create only accepts
+  // void* (generic pointer) while we need to pass MultiplyTask* struct. The
+  // static_cast converts it back.
+  MultiplyTask *task = static_cast<MultiplyTask *>(arg);
+
+  int sum = 0;
+
+  while (true) {
+    int i, j;
+
+    // Claim next uncomputed element (critical section)
+    pthread_mutex_lock(task->mutex);
+
+    // Break out of the loop if no more work left
+    if (*task->remaining == 0) {
+      pthread_mutex_unlock(task->mutex);
+      break;
+    }
+
+    i = *task->next_i;
+    j = *task->next_j;
+
+    // Advance to the next position
+    (*task->next_j)++;
+    if (*task->next_j >= task->colsB) {
+      *task->next_j = 0;
+      (*task->next_i)++;
+    }
+    (*task->remaining)--;
+
+    pthread_mutex_unlock(task->mutex);
+
+    // Compute C[i][j] = sum(A[i][k] * B[k][j])
+    sum = 0;
+    for (int k = 0; k < task->colsA; ++k) {
+      sum += (*task->A)[i][k] * (*task->B)[k][j];
+    }
+    (*task->C)[i][j] = sum;
+
+    // Small delay to allow thread interleaving (per requirements)
+    usleep(1000); // 1ms
+  }
+
+  // Required by the POSIX threads API
+  return nullptr;
+}
+
 bool multiplyMatrices(const vector<vector<int>> &A, int rowsA, int colsA,
                       const vector<vector<int>> &B, int rowsB, int colsB,
-                      vector<vector<int>> &C) {
+                      vector<vector<int>> &C, int numThreads) {
+  if (numThreads < 1)
+    numThreads = 1;
+
+  // Initialize result matrix
   C.resize(rowsA, vector<int>(colsB, 0));
 
-  // Standard matrix multiplication: C[i][j] = sum(A[i][k] * B[k][j])
-  for (int i = 0; i < rowsA; ++i) {
-    for (int j = 0; j < colsB; ++j) {
-      for (int k = 0; k < colsA; ++k) {
-        C[i][j] += A[i][k] * B[k][j];
+  // Single-threaded fallback (original logic)
+  if (numThreads == 1) {
+    for (int i = 0; i < rowsA; ++i) {
+      for (int j = 0; j < colsB; ++j) {
+        for (int k = 0; k < colsA; ++k) {
+          C[i][j] += A[i][k] * B[k][j];
+        }
       }
     }
+    return true;
   }
+
+  // Static mutex initialization (no function call to pthread_mutex_init()
+  // needed)
+  pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+  int next_i = 0, next_j = 0;
+  int remaining = rowsA * colsB;
+
+  MultiplyTask task;
+  task.A = &A;
+  task.B = &B;
+  task.C = &C;
+  task.colsA = colsA;
+  task.colsB = colsB;
+  task.next_i = &next_i;
+  task.next_j = &next_j;
+  task.remaining = &remaining;
+  task.mutex = &mutex;
+
+  // Create worker threads
+  vector<pthread_t> threads(numThreads);
+  for (int t = 0; t < numThreads; ++t) {
+    pthread_create(&threads[t], nullptr, multiplyWorker, &task);
+  }
+
+  // Wait for all threads to finish
+  for (int t = 0; t < numThreads; ++t) {
+    pthread_join(threads[t], nullptr);
+  }
+
+  pthread_mutex_destroy(&mutex);
   return true;
 }
 
