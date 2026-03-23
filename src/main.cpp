@@ -11,12 +11,12 @@ int main() {
   int rowsB, colsB;
 
   // Read Matrix A
-  if (!readMatrix("A.txt", matrixA, rowsA, colsA)) {
+  if (!readMatrix("data/A.txt", matrixA, rowsA, colsA)) {
     return 1;
   }
 
   // Read Matrix B
-  if (!readMatrix("B.txt", matrixB, rowsB, colsB)) {
+  if (!readMatrix("data/B.txt", matrixB, rowsB, colsB)) {
     return 1;
   }
 
@@ -38,10 +38,10 @@ int main() {
   }
 
   // Display resulting C matrix
-  printMatrix("A × B", matrixC, rowsA, colsB);
+  printMatrix("A * B", matrixC, rowsA, colsB);
 
   // Write resulting matrix into C.txt
-  if (!writeMatrix("C.txt", matrixC, rowsA, colsB)) {
+  if (!writeMatrix("data/C.txt", matrixC, rowsA, colsB)) {
     return 1;
   }
 
