@@ -144,7 +144,7 @@ void *multiplyWorker(void *arg) {
 }
 
 bool multiplyMatrices(const vector<vector<int>> &A, int rowsA, int colsA,
-                      const vector<vector<int>> &B, int rowsB, int colsB,
+                      const vector<vector<int>> &B, int colsB,
                       vector<vector<int>> &C, int numThreads) {
   if (numThreads < 1)
     numThreads = 1;

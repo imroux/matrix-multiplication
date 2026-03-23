@@ -12,7 +12,7 @@ void printMatrix(const std::string &name,
                  int cols);
 bool multiplyMatrices(const std::vector<std::vector<int>> &A, int rowsA,
                       int colsA, const std::vector<std::vector<int>> &B,
-                      int rowsB, int colsB, std::vector<std::vector<int>> &C,
+                      int colsB, std::vector<std::vector<int>> &C,
                       int numThreads = 1);
 bool writeMatrix(const std::string &filename,
                  const std::vector<std::vector<int>> &matrix, int rows,
