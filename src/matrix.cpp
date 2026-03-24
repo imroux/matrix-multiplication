@@ -1,8 +1,9 @@
 #include "matrix.h" // Include our own header first
 #include <fstream>
+#include <iomanip> // For progress bar formatting
 #include <iostream>
 #include <pthread.h>
-#include <unistd.h> // for usleep()
+#include <unistd.h> // For usleep()
 
 using namespace std;
 
@@ -19,6 +20,11 @@ struct MultiplyTask {
   int *next_j;                  // Shared work tracker
   int *remaining;               // To know when to stop
   pthread_mutex_t *mutex;       // Mutex for synchronization
+
+  // Progress Bar fields
+  int totalElements;
+  pthread_mutex_t *progressMutex;
+  bool showProgress;
 };
 
 // Minimal struct to pass data to the log writer thread
@@ -30,6 +36,33 @@ struct LogData {
   double computationTimeMs;
   int numThreads;
 };
+
+// Simple progress bar display (updates in place using \r)
+void showProgress(int completed, int total, pthread_mutex_t *progressMutex) {
+  if (total == 0)
+    return;
+
+  // Lock to prevent interleaved output from multiple threads
+  pthread_mutex_lock(progressMutex);
+
+  int percent = (completed * 100) / total;
+  int barWidth = 80;
+  int filled = (completed * barWidth) / total;
+
+  cout << "\r[";
+  for (int i = 0; i < barWidth; ++i) {
+    if (i < filled)
+      cout << "=";
+    else if (i == filled)
+      cout << ">";
+    else
+      cout << " ";
+  }
+  cout << "] " << setw(3) << percent << "% (" << completed << "/" << total
+       << ")" << flush;
+
+  pthread_mutex_unlock(progressMutex);
+}
 
 bool readMatrix(const string &filename, vector<vector<int>> &matrix, int &rows,
                 int &cols) {
@@ -112,6 +145,8 @@ void *multiplyWorker(void *arg) {
   MultiplyTask *task = static_cast<MultiplyTask *>(arg);
 
   int sum = 0;
+  int elementsCompleted = 0;
+  const int PROGRESS_INTERVAL = 10; // Update every N elements
 
   while (true) {
     int i, j;
@@ -145,6 +180,13 @@ void *multiplyWorker(void *arg) {
     }
     (*task->C)[i][j] = sum;
 
+    // Show progress periodically
+    elementsCompleted++;
+    if (task->showProgress && elementsCompleted % PROGRESS_INTERVAL == 0) {
+      int completed = task->totalElements - *task->remaining;
+      showProgress(completed, task->totalElements, task->progressMutex);
+    }
+
     // Small delay to allow thread interleaving (per requirements)
     usleep(1000); // 1ms
   }
@@ -177,9 +219,11 @@ bool multiplyMatrices(const vector<vector<int>> &A, int rowsA, int colsA,
   // Static mutex initialization (no function call to pthread_mutex_init()
   // needed)
   pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t progressMutex = PTHREAD_MUTEX_INITIALIZER;
 
   int next_i = 0, next_j = 0;
-  int remaining = rowsA * colsB;
+  int totalElements = rowsA * colsB;
+  int remaining = totalElements;
 
   MultiplyTask task;
   task.A = &A;
@@ -191,6 +235,9 @@ bool multiplyMatrices(const vector<vector<int>> &A, int rowsA, int colsA,
   task.next_j = &next_j;
   task.remaining = &remaining;
   task.mutex = &mutex;
+  task.totalElements = totalElements;
+  task.progressMutex = &progressMutex;
+  task.showProgress = true;
 
   // Create worker threads
   vector<pthread_t> threads(numThreads);
@@ -203,7 +250,14 @@ bool multiplyMatrices(const vector<vector<int>> &A, int rowsA, int colsA,
     pthread_join(threads[t], nullptr);
   }
 
+  // Clear progress bar line and show completion
+  cout << "\r[";
+  for (int i = 0; i < 40; ++i)
+    cout << "=";
+  cout << "] 100% (" << totalElements << "/" << totalElements << ") ✓" << endl;
+
   pthread_mutex_destroy(&mutex);
+  pthread_mutex_destroy(&progressMutex);
   return true;
 }
 

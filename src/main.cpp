@@ -14,7 +14,7 @@ int main() {
   vector<vector<int>> matrixC;
   int rowsA, colsA;
   int rowsB, colsB;
-  int p_threads = 6;
+  int p_threads = 4;
 
   // Read Matrix A
   if (!readMatrix("data/A.txt", matrixA, rowsA, colsA)) {
